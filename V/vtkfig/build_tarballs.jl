@@ -4,11 +4,11 @@ using BinaryBuilder
 using Pkg
 
 name = "vtkfig"
-version = v"0.23.0"
+version = v"0.24.0"
 
 # Collection of sources required to build vtkfig
 sources = [
-    GitSource("https://github.com/j-fu/vtkfig.git","f5c1e0fe84771891071aebdff5d1e98df3832fd3")
+    GitSource("https://github.com/j-fu/vtkfig.git","4c13a4cdcce88b477d1356979f2a53b67673a115")
 ]
 
 
@@ -26,7 +26,7 @@ fi
 mkdir build
 cd build
 cmake -DVTKFIG_BUILD_EXAMPLES:BOOL=False  -DCMAKE_INSTALL_PREFIX=$prefix  -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TARGET_TOOLCHAIN}  -DCMAKE_BUILD_TYPE=Release ../vtkfig
-make -j${nproc}
+make -j${nproc} 
 make install
 """
 
