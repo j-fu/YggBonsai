@@ -34,16 +34,28 @@ if [[ "${target}" == *-linux-* ]] || [[ "${target}" == *-freebsd* ]]; then
 fi
 
 
+
+# Additional link into toolchain hierarchy for binaries created in tool builds
+USR_LOCAL=`dirname $CMAKE_TARGET_TOOLCHAIN`/$bb_target/sys-root/usr/local
+ln -s $prefix/bin/  $USR_LOCAL/bin
+
+# Build and install wrapper tools. 
+# In fact they are not needed for the minimal build, but  vtk insists, let us
+# see what comes out of https://gitlab.kitware.com/vtk/vtk/-/issues/17821
 mkdir build
 cd build
 cmake -DVTK_BUILD_COMPILE_TOOLS_ONLY:BOOL=ON\
+      -DCMAKE_INSTALL_PREFIX=$prefix\
       -DVTK_CUSTOM_LIBRARY_SUFFIX=""\
       -DCMAKE_BUILD_TYPE=Release\
       ../VTK-9.0.0.rc1
 make -j${nproc}
 make install
-rm -r *
 
+# With wrapper tools installed start from a clean build directory
+rm -rf *
+
+# Mock test result for large file support for compile toolchain
 cat <<EOF  > DefaultTryRunResults.cmake
 set( CMAKE_REQUIRE_LARGE_FILE_SUPPORT 
      "0"
@@ -148,6 +160,7 @@ cmake -C DefaultTryRunResults.cmake\
      -DVTK_MODULE_ENABLE_VTK_IOXdmf2:STRING=NO\
      -DVTK_MODULE_ENABLE_VTK_IOXdmf3:STRING=NO\
      -DVTK_MODULE_ENABLE_VTK_WrappingPythonCore:STRING=NO\
+     -DVTK_MODULE_ENABLE_VTK_WrappingTools:STRING=NO\
      -DVTK_MODULE_ENABLE_VTK_PythonInterpreter:STRING=NO\
      -DVTK_MODULE_ENABLE_VTK_pegtl:STRING=NO\
      -DVTK_MODULE_ENABLE_VTK_sqlite:STRING=NO\
@@ -170,28 +183,32 @@ cmake -C DefaultTryRunResults.cmake\
      -DVTK_MODULE_USE_EXTERNAL_VTK_lz4:BOOL=ON\
      -DVTK_MODULE_USE_EXTERNAL_VTK_lzma:BOOL=ON\
      -DVTK_MODULE_USE_EXTERNAL_VTK_png:BOOL=ON\
+     -DVTKCompileTools_DIR=$prefix/lib64/cmake/vtkcompiletools-9.0\
      -DCMAKE_INSTALL_PREFIX=$prefix\
      -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TARGET_TOOLCHAIN}\
      -DCMAKE_BUILD_TYPE=Release\
      ../VTK-9.0.0.rc1/
+
 make -j${nproc}
+
 make install
 
 """
-#
-
-#
 
 platforms = [p for p in supported_platforms() if p isa Union{Linux,FreeBSD}]
 platforms = expand_cxxstring_abis(platforms)
 
 # for testing during development
-platforms=[Linux(:x86_64, libc=:glibc, compiler_abi=CompilerABI(;cxxstring_abi=:cxx11))]
+# platforms=[Linux(:x86_64, libc=:glibc, compiler_abi=CompilerABI(;cxxstring_abi=:cxx11))]
 
-!!!todo: probably we need to export the cross-compiling toolchain!!!
-Can we have a CMakeProduct ?
 # The products that we will ensure are always built
 products = [
+    ExecutableProduct("vtkWrapHierarchy", :vtkWrapHierarchy),
+    FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-targets.cmake",               :VTKCompileTools_targets_cmake),
+    FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-targets-release.cmake",       :VTKCompileTools_targets_release_cmake),
+    FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-vtk-module-properties.cmake", :VTKCompileTools_vtk_module_properties_cmake),
+    FileProduct("lib64/cmake/vtkcompiletools-9.0/vtkcompiletools-config.cmake",                :vtkcompiletools_config_cmake),
+    FileProduct("lib64/cmake/vtkcompiletools-9.0/vtkcompiletools-config-version.cmake",        :vtkcompiletools_config_version_cmake),
     LibraryProduct("libvtkCommonColor",:libvtkCommonColor),
     LibraryProduct("libvtkCommonComputationalGeometry",:libvtkCommonComputationalGeometry),
     LibraryProduct("libvtkCommonCore",:libvtkCommonCore),
