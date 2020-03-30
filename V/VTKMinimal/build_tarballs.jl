@@ -9,7 +9,7 @@ version = v"9.0.0"
 # out HDF5 and MPI, thus creating fewer clash points for transient linking problems.
 # Building the full version on BinaryBuilder seems to be feasible, though.      
 #
-# The platform constraint to linux + FreeBSD comes from the constraints on libXt etc.
+# The platform constraint to linux + FreeBSD comes from the constraints on the X11 libs etc.
 # Currently, this depends on the Xorg libraries, therefore it is not available for Mac+Win,
 # this situation may change though with Qt.
 #
@@ -35,12 +35,13 @@ fi
 
 
 
-# Additional link into toolchain hierarchy for binaries created in tool builds
-USR_LOCAL=`dirname $CMAKE_TARGET_TOOLCHAIN`/$bb_target/sys-root/usr/local
+# Additional link into toolchain hierarchy for binaries created during tool building
+
+USR_LOCAL=`grep CMAKE_SYSROOT $CMAKE_TARGET_TOOLCHAIN | sed -e 's/set(CMAKE\_SYSROOT//g' -e 's/)//g'`/usr/local
 ln -s $prefix/bin/  $USR_LOCAL/bin
 
 # Build and install wrapper tools. 
-# In fact they are not needed for the minimal build, but  vtk insists, let us
+# In fact they appear to be not needed for the minimal build, but  vtk insists, let us
 # see what comes out of https://gitlab.kitware.com/vtk/vtk/-/issues/17821
 mkdir build
 cd build
@@ -195,20 +196,27 @@ make install
 
 """
 
+# These are the platforms where we have the X11 stuff
 platforms = [p for p in supported_platforms() if p isa Union{Linux,FreeBSD}]
-platforms = expand_cxxstring_abis(platforms)
+
+# Stick to cxx11 in the sense of "moving forward"
+platforms = [p for p in expand_cxxstring_abis(platforms) if p.compiler_abi==CompilerABI(cxxstring_abi=:cxx11) ]
+
 
 # for testing during development
-# platforms=[Linux(:x86_64, libc=:glibc, compiler_abi=CompilerABI(;cxxstring_abi=:cxx11))]
+platforms=[Linux(:x86_64, libc=:glibc, compiler_abi=CompilerABI(;cxxstring_abi=:cxx11))]
+
+# platforms=[Linux(:i686, libc=:glibc, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
+
 
 # The products that we will ensure are always built
 products = [
-    ExecutableProduct("vtkWrapHierarchy", :vtkWrapHierarchy),
-    FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-targets.cmake",               :VTKCompileTools_targets_cmake),
-    FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-targets-release.cmake",       :VTKCompileTools_targets_release_cmake),
-    FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-vtk-module-properties.cmake", :VTKCompileTools_vtk_module_properties_cmake),
-    FileProduct("lib64/cmake/vtkcompiletools-9.0/vtkcompiletools-config.cmake",                :vtkcompiletools_config_cmake),
-    FileProduct("lib64/cmake/vtkcompiletools-9.0/vtkcompiletools-config-version.cmake",        :vtkcompiletools_config_version_cmake),
+    # ExecutableProduct("vtkWrapHierarchy", :vtkWrapHierarchy),
+    # FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-targets.cmake",               :VTKCompileTools_targets_cmake),
+    # FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-targets-release.cmake",       :VTKCompileTools_targets_release_cmake),
+    # FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-vtk-module-properties.cmake", :VTKCompileTools_vtk_module_properties_cmake),
+    # FileProduct("lib64/cmake/vtkcompiletools-9.0/vtkcompiletools-config.cmake",                :vtkcompiletools_config_cmake),
+    # FileProduct("lib64/cmake/vtkcompiletools-9.0/vtkcompiletools-config-version.cmake",        :vtkcompiletools_config_version_cmake),
     LibraryProduct("libvtkCommonColor",:libvtkCommonColor),
     LibraryProduct("libvtkCommonComputationalGeometry",:libvtkCommonComputationalGeometry),
     LibraryProduct("libvtkCommonCore",:libvtkCommonCore),
@@ -303,5 +311,6 @@ dependencies = [
 ]
 
 # Build the tarballs, and possibly a `build.jl` as well.
-build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies)
+build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies, preferred_gcc_version=v"9")
 
+ 
