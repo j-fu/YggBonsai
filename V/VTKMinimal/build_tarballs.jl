@@ -41,8 +41,8 @@ USR_LOCAL=`grep CMAKE_SYSROOT $CMAKE_TARGET_TOOLCHAIN | sed -e 's/set(CMAKE\_SYS
 ln -s $prefix/bin/  $USR_LOCAL/bin
 
 # Build and install wrapper tools. 
-# In fact they appear to be not needed for the minimal build, but  vtk insists, let us
-# see what comes out of https://gitlab.kitware.com/vtk/vtk/-/issues/17821
+# In fact they appear to be not needed for the minimal build, but  vtk insists
+
 mkdir build
 cd build
 cmake -DVTK_BUILD_COMPILE_TOOLS_ONLY:BOOL=ON\
@@ -306,5 +306,4 @@ dependencies = [
 
 # Build the tarballs, and possibly a `build.jl` as well.
 build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies, preferred_gcc_version=v"9")
-
  
