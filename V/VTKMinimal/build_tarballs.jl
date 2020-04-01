@@ -5,8 +5,9 @@ using BinaryBuilder
 name = "VTKMinimal"
 version = v"9.0.0"
 
-# Build a minimal subset of VTK sufficient for rendering purposes. Notably, this leaves
-# out HDF5 and MPI, thus creating fewer clash points for transient linking problems.
+#
+# Build a minimal subset of VTK sufficient for rendering purposes (see vtkfig_jll, VTKView.jl)
+# Notably, this leaves  out HDF5 and MPI, thus creating fewer clash points for transient linking problems.
 # Building the full version on BinaryBuilder seems to be feasible, though.      
 #
 # The platform constraint to linux + FreeBSD comes from the constraints on the X11 libs etc.
@@ -17,12 +18,17 @@ version = v"9.0.0"
 # vtk built-in version. It appears to be possible to replace them by jlls upon availability of those.
 # Though there is Ogg_jll, the vtktheora does not go well with it.
 #
-#
+# Generally it seems to be a good idea not to use the vtk built-in versions as this could create
+# transient linking clashes if other packages use the same lib from a jll.
+# 
+# (c) Jürgen Fuhrmann (@j-fu)
 
 # Grab the source directly from the vtk website
 sources = [
-    "https://www.vtk.org/files/release/9.0/VTK-9.0.0.rc1.tar.gz" => "7dbedd58a1ae144b98a4534b9badac683c88e5aa4a959a57856680f00258d268"
+    # "https://www.vtk.org/files/release/9.0/VTK-9.0.0.rc1.tar.gz" => "7dbedd58a1ae144b98a4534b9badac683c88e5aa4a959a57856680f00258d268"
+    GitSource("https://gitlab.kitware.com/vtk/vtk","496e01f755421cc12dc52d40d8143299af9c6325")
 ]
+
 
 # Bash recipe for building across all platforms
 script = raw"""
@@ -34,29 +40,16 @@ if [[ "${target}" == *-linux-* ]] || [[ "${target}" == *-freebsd* ]]; then
 fi
 
 
-
-# Additional link into toolchain hierarchy for binaries created during tool building
-
-USR_LOCAL=`grep CMAKE_SYSROOT $CMAKE_TARGET_TOOLCHAIN | sed -e 's/set(CMAKE\_SYSROOT//g' -e 's/)//g'`/usr/local
-ln -s $prefix/bin/  $USR_LOCAL/bin
-
-# Build and install wrapper tools. 
-# In fact they appear to be not needed for the minimal build, but  vtk insists
+tarname="VTK-9.0.0.rc1"
 
 mkdir build
 cd build
-cmake -DVTK_BUILD_COMPILE_TOOLS_ONLY:BOOL=ON\
-      -DCMAKE_INSTALL_PREFIX=$prefix\
-      -DVTK_CUSTOM_LIBRARY_SUFFIX=""\
-      -DCMAKE_BUILD_TYPE=Release\
-      ../VTK-9.0.0.rc1
-make -j${nproc}
-make install
 
-# With wrapper tools installed start from a clean build directory
-rm -rf *
 
-# Mock test result for large file support for compile toolchain
+#
+# Mock test result for large file support for compiling toolchain
+# we might  set  this to 1 for 64bit ?
+#
 cat <<EOF  > DefaultTryRunResults.cmake
 set( CMAKE_REQUIRE_LARGE_FILE_SUPPORT 
      "0"
@@ -67,10 +60,13 @@ set( CMAKE_REQUIRE_LARGE_FILE_SUPPORT__TRYRUN_OUTPUT
      CACHE STRING "Output from TRY_RUN" FORCE)
 EOF
 
+
 cmake -C DefaultTryRunResults.cmake\
      -DVTK_CUSTOM_LIBRARY_SUFFIX=""\
      -DCMAKE_REQUIRE_LARGE_FILE_SUPPORT=0\
      -DBUILD_SHARED_LIBS=ON\
+     -DVTK_ENABLE_WRAPPING=OFF\
+     -DVTK_FORBID_DOWNLOADS=YES\
      -DVTK_GROUP_ENABLE_Rendering=YES\
      -DVTK_GROUP_ENABLE_StandAlone=YES\
      -DVTK_GROUP_ENABLE_Imaging=NO\
@@ -179,11 +175,10 @@ cmake -C DefaultTryRunResults.cmake\
      -DVTK_MODULE_USE_EXTERNAL_VTK_lz4:BOOL=ON\
      -DVTK_MODULE_USE_EXTERNAL_VTK_lzma:BOOL=ON\
      -DVTK_MODULE_USE_EXTERNAL_VTK_png:BOOL=ON\
-     -DVTKCompileTools_DIR=$prefix/lib64/cmake/vtkcompiletools-9.0\
      -DCMAKE_INSTALL_PREFIX=$prefix\
      -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TARGET_TOOLCHAIN}\
      -DCMAKE_BUILD_TYPE=Release\
-     ../VTK-9.0.0.rc1/
+     ../${tarname}/
 
 make -j${nproc}
 
@@ -201,16 +196,11 @@ platforms = [p for p in expand_cxxstring_abis(platforms) if p.compiler_abi==Comp
 # for testing during development
 # platforms=[Linux(:x86_64, libc=:glibc, compiler_abi=CompilerABI(;cxxstring_abi=:cxx11))]
 # platforms=[Linux(:i686, libc=:glibc, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
+# platforms=[Linux(:aarch64, libc=:glibc, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
 
 
 # The products that we will ensure are always built
 products = [
-    # ExecutableProduct("vtkWrapHierarchy", :vtkWrapHierarchy),
-    # FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-targets.cmake",               :VTKCompileTools_targets_cmake),
-    # FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-targets-release.cmake",       :VTKCompileTools_targets_release_cmake),
-    # FileProduct("lib64/cmake/vtkcompiletools-9.0/VTKCompileTools-vtk-module-properties.cmake", :VTKCompileTools_vtk_module_properties_cmake),
-    # FileProduct("lib64/cmake/vtkcompiletools-9.0/vtkcompiletools-config.cmake",                :vtkcompiletools_config_cmake),
-    # FileProduct("lib64/cmake/vtkcompiletools-9.0/vtkcompiletools-config-version.cmake",        :vtkcompiletools_config_version_cmake),
     LibraryProduct("libvtkCommonColor",:libvtkCommonColor),
     LibraryProduct("libvtkCommonComputationalGeometry",:libvtkCommonComputationalGeometry),
     LibraryProduct("libvtkCommonCore",:libvtkCommonCore),
@@ -283,7 +273,6 @@ products = [
     LibraryProduct("libvtksys",:libvtksys),
     LibraryProduct("libvtktheora",:libvtktheora),
     LibraryProduct("libvtkViewsCore",:libvtkViewsCore),
-    LibraryProduct("libvtkWrappingTools",:libvtkWrappingTools)
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -305,5 +294,7 @@ dependencies = [
 ]
 
 # Build the tarballs, and possibly a `build.jl` as well.
-build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies, preferred_gcc_version=v"9")
+# On older compiler versions there were errors when cross-compiling.
+build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies,
+               preferred_gcc_version=v"9")
  
