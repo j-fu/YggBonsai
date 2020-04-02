@@ -26,9 +26,14 @@ version = v"9.0.0"
 # Grab the source directly from the vtk website
 sources = [
     # "https://www.vtk.org/files/release/9.0/VTK-9.0.0.rc1.tar.gz" => "7dbedd58a1ae144b98a4534b9badac683c88e5aa4a959a57856680f00258d268"
-    GitSource("https://gitlab.kitware.com/vtk/vtk","496e01f755421cc12dc52d40d8143299af9c6325")
+
+    # Version with possibility to switch off wrapping tools. Will be in 9.0.0 final.
+    ArchiveSource("file:///home/fuhrmann/Downloads/vtk-496e01f755421cc12dc52d40d8143299af9c6325.tar.gz","b051a4c81cee1a6f4a96b8bdd3731a71b686776c20951d72c90dfefa6f7c06aa")
 ]
 
+# Adapt tarname to the source
+tarname="VTK-9.0.0.rc1"
+tarname="vtk-496e01f755421cc12dc52d40d8143299af9c6325"
 
 # Bash recipe for building across all platforms
 script = raw"""
@@ -40,7 +45,6 @@ if [[ "${target}" == *-linux-* ]] || [[ "${target}" == *-freebsd* ]]; then
 fi
 
 
-tarname="VTK-9.0.0.rc1"
 
 mkdir build
 cd build
@@ -66,6 +70,7 @@ cmake -C DefaultTryRunResults.cmake\
      -DCMAKE_REQUIRE_LARGE_FILE_SUPPORT=0\
      -DBUILD_SHARED_LIBS=ON\
      -DVTK_ENABLE_WRAPPING=OFF\
+     -DVTK_ENABLE_LOGGING=OFF\
      -DVTK_FORBID_DOWNLOADS=YES\
      -DVTK_GROUP_ENABLE_Rendering=YES\
      -DVTK_GROUP_ENABLE_StandAlone=YES\
@@ -76,6 +81,7 @@ cmake -C DefaultTryRunResults.cmake\
      -DVTK_GROUP_ENABLE_Views=NO\
      -DVTK_GROUP_ENABLE_Web=NO\
      -DVTK_MODULE_ENABLE_VTK_ViewsQt:STRING=NO\
+     -DVTK_MODULE_ENABLE_VTK_RenderingContextOpenGL2=YES\
      -DVTK_MODULE_ENABLE_VTK_GUISupportQtSQL:STRING=NO\
      -DVTK_MODULE_ENABLE_VTK_AcceleratorsVTKm:STRING=NO\
      -DVTK_MODULE_ENABLE_VTK_InfovisBoost:STRING=NO\
@@ -187,7 +193,7 @@ make install
 """
 
 # These are the platforms where we have the X11 stuff
-platforms = [p for p in supported_platforms() if p isa Union{Linux,FreeBSD}]
+platforms = [p for p in supported_platforms() if p isa Union{Linux,FreeBSD} && p.arch !=:powerpc64le]
 
 # Stick to cxx11 in the sense of "moving forward"
 platforms = [p for p in expand_cxxstring_abis(platforms) if p.compiler_abi==CompilerABI(cxxstring_abi=:cxx11) ]
@@ -197,11 +203,12 @@ platforms = [p for p in expand_cxxstring_abis(platforms) if p.compiler_abi==Comp
 # platforms=[Linux(:x86_64, libc=:glibc, compiler_abi=CompilerABI(;cxxstring_abi=:cxx11))]
 # platforms=[Linux(:i686, libc=:glibc, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
 # platforms=[Linux(:aarch64, libc=:glibc, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
+# platforms=[Linux(:aarch64, libc=:musl, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
 
 
 # The products that we will ensure are always built
 products = [
-    LibraryProduct("libvtkCommonColor",:libvtkCommonColor),
+    LibraryProduct("libvtkCommonColor",:libvtkCommonColor),                                               
     LibraryProduct("libvtkCommonComputationalGeometry",:libvtkCommonComputationalGeometry),
     LibraryProduct("libvtkCommonCore",:libvtkCommonCore),
     LibraryProduct("libvtkCommonDataModel",:libvtkCommonDataModel),
@@ -252,7 +259,6 @@ products = [
     LibraryProduct("libvtkIOOggTheora",:libvtkIOOggTheora),
     LibraryProduct("libvtkIOXML",:libvtkIOXML),
     LibraryProduct("libvtkIOXMLParser",:libvtkIOXMLParser),
-    LibraryProduct("libvtkloguru",:libvtkloguru),
     LibraryProduct("libvtkmetaio",:libvtkmetaio),
     LibraryProduct("libvtkogg",:libvtkogg),
     LibraryProduct("libvtkParallelCore",:libvtkParallelCore),
@@ -272,7 +278,8 @@ products = [
     LibraryProduct("libvtkRenderingVolumeOpenGL2",:libvtkRenderingVolumeOpenGL2),
     LibraryProduct("libvtksys",:libvtksys),
     LibraryProduct("libvtktheora",:libvtktheora),
-    LibraryProduct("libvtkViewsCore",:libvtkViewsCore),
+    LibraryProduct("libvtkViewsCore",:libvtkViewsCore)
+    #    LibraryProduct("libvtkloguru",:libvtkloguru): logging is off.
 ]
 
 # Dependencies that must be installed before this package can be built
