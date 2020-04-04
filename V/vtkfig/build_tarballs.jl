@@ -4,13 +4,12 @@ using BinaryBuilder
 using Pkg
 
 name = "vtkfig"
-version = v"0.24.1"
+version = v"0.24.3"
 
 # Collection of sources required to build vtkfig
 sources = [
     GitSource("https://github.com/j-fu/vtkfig.git","b44c3f0879d4b660bb3b1de6db248def0fde7366")
 ]
-
 
 
 # Bash recipe for building across all platforms
@@ -22,9 +21,11 @@ if [[ "${target}" == *-linux-* ]] || [[ "${target}" == *-freebsd* ]]; then
     EXTRA_VARS+=(LDFLAGS.EXTRA="")
 fi
 
+# workaround for finding installed targets
 USR_LOCAL=`grep CMAKE_SYSROOT $CMAKE_TARGET_TOOLCHAIN | sed -e 's/set(CMAKE\_SYSROOT//g' -e 's/)//g'`/usr/local
 ln -s $prefix/bin/  $USR_LOCAL/bin
 ln -s $prefix/include/  $USR_LOCAL/include
+
 
 mkdir build
 cd build
@@ -39,11 +40,13 @@ make -j${nproc}
 make install
 """
 
-# These are the platforms we will build for by default, unless further
-# platforms are passed in on the command line
-# platforms = supported_platforms()
 
-platforms=[Linux(:x86_64, libc=:glibc, compiler_abi=CompilerABI(;cxxstring_abi=:cxx11))]
+# These are the platforms where we have the X11 stuff and VTKMinimal
+platforms = [p for p in supported_platforms() if p isa Union{Linux,FreeBSD}]
+
+# Stick to cxx11 
+platforms = [p for p in expand_cxxstring_abis(platforms) if p.compiler_abi==CompilerABI(cxxstring_abi=:cxx11) ]
+
 
 # The products that we will ensure are always built
 products = [
@@ -52,13 +55,14 @@ products = [
 
 # Dependencies that must be installed before this package can be built
 # jll and general version numbering are not compatible:
-# see https://github.com/JuliaLang/Pkg.jl/issues/1568
+# see https://github.com/JuliaLang/Pkg.jl/issues/1568,
+# so we resolve this by fixing the commit hash of the dependency
 
 dependencies=[
-    Dependency(PackageSpec(name="VTKMinimal_jll",rev="d77d859d1a15d445ea8f4dab7c26652463dfa00b")) # 8.2.0+1
+#    Dependency(PackageSpec(name="VTKMinimal_jll",rev="530a89e35ca3b95a770f37f7115da8aec6e441a0")) # 9.0.0+0
+    Dependency(PackageSpec(name="VTKMinimal_jll",rev="c139fdc88bb8c328304062940dd4c8fcc1fa5414")) # 9.0.0+1 
 ]
 
-
 # Build the tarballs, and possibly a `build.jl` as well.
-build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies, preferred_gcc_version=v"9")
+build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies, preferred_gcc_version=v"6")
 
