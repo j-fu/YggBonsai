@@ -26,14 +26,11 @@ version = v"9.0.0"
 # Grab the source directly from the vtk website
 sources = [
     # "https://www.vtk.org/files/release/9.0/VTK-9.0.0.rc1.tar.gz" => "7dbedd58a1ae144b98a4534b9badac683c88e5aa4a959a57856680f00258d268"
-
-    # Version with possibility to switch off wrapping tools. Will be in 9.0.0 final.
-    ArchiveSource("file:///home/fuhrmann/Downloads/vtk-496e01f755421cc12dc52d40d8143299af9c6325.tar.gz","b051a4c81cee1a6f4a96b8bdd3731a71b686776c20951d72c90dfefa6f7c06aa")
+    # Version with possibility to switch off wrapping tools and patch to compile in freebsd. Will be in 9.0.0 final.
+    ArchiveSource("file:///home/fuhrmann/Downloads/vtk-b1a7344f2be08aaca723b0e6880c0ca514d27e9f.tar.gz","ef36a80741dbd76600a24cc006bb4c58f5de24955beacd4df774bf0ea651ebcd")
 ]
 
-# Adapt tarname to the source
-tarname="VTK-9.0.0.rc1"
-tarname="vtk-496e01f755421cc12dc52d40d8143299af9c6325"
+
 
 # Bash recipe for building across all platforms
 script = raw"""
@@ -44,16 +41,19 @@ if [[ "${target}" == *-linux-* ]] || [[ "${target}" == *-freebsd* ]]; then
     EXTRA_VARS+=(LDFLAGS.EXTRA="")
 fi
 
-
+# Adapt tarname to the source
+tarname="VTK-9.0.0.rc1"
+tarname="vtk-b1a7344f2be08aaca723b0e6880c0ca514d27e9f"
 
 mkdir build
 cd build
 
 
 #
-# Mock test result for large file support for compiling toolchain
-# we might  set  this to 1 for 64bit ?
+# Mock test result for large file support for compiling toolchain.
+# We might  set  this to 1 for 64bit ?
 #
+
 cat <<EOF  > DefaultTryRunResults.cmake
 set( CMAKE_REQUIRE_LARGE_FILE_SUPPORT 
      "0"
@@ -73,6 +73,7 @@ cmake -C DefaultTryRunResults.cmake\
      -DVTK_ENABLE_LOGGING=OFF\
      -DVTK_FORBID_DOWNLOADS=YES\
      -DVTK_GROUP_ENABLE_Rendering=YES\
+     -DVTK_MODULE_ENABLE_VTK_RenderingContextOpenGL2=YES\
      -DVTK_GROUP_ENABLE_StandAlone=YES\
      -DVTK_GROUP_ENABLE_Imaging=NO\
      -DVTK_GROUP_ENABLE_MPI=NO\
@@ -81,7 +82,6 @@ cmake -C DefaultTryRunResults.cmake\
      -DVTK_GROUP_ENABLE_Views=NO\
      -DVTK_GROUP_ENABLE_Web=NO\
      -DVTK_MODULE_ENABLE_VTK_ViewsQt:STRING=NO\
-     -DVTK_MODULE_ENABLE_VTK_RenderingContextOpenGL2=YES\
      -DVTK_MODULE_ENABLE_VTK_GUISupportQtSQL:STRING=NO\
      -DVTK_MODULE_ENABLE_VTK_AcceleratorsVTKm:STRING=NO\
      -DVTK_MODULE_ENABLE_VTK_InfovisBoost:STRING=NO\
@@ -189,11 +189,12 @@ cmake -C DefaultTryRunResults.cmake\
 make -j${nproc}
 
 make install
+false
 
 """
 
 # These are the platforms where we have the X11 stuff
-platforms = [p for p in supported_platforms() if p isa Union{Linux,FreeBSD} && p.arch !=:powerpc64le]
+platforms = [p for p in supported_platforms() if p isa Union{Linux,FreeBSD}]
 
 # Stick to cxx11 in the sense of "moving forward"
 platforms = [p for p in expand_cxxstring_abis(platforms) if p.compiler_abi==CompilerABI(cxxstring_abi=:cxx11) ]
@@ -202,12 +203,13 @@ platforms = [p for p in expand_cxxstring_abis(platforms) if p.compiler_abi==Comp
 # for testing during development
 # platforms=[Linux(:x86_64, libc=:glibc, compiler_abi=CompilerABI(;cxxstring_abi=:cxx11))]
 # platforms=[Linux(:i686, libc=:glibc, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
-# platforms=[Linux(:aarch64, libc=:glibc, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
+# platforms=[Linux(:powerpc64le, libc=:glibc, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
 # platforms=[Linux(:aarch64, libc=:musl, compiler_abi=CompilerABI(cxxstring_abi=:cxx11))]
 
 
 # The products that we will ensure are always built
 products = [
+    ExecutableProduct("vtkProbeOpenGLVersion", :vtkProbeOpenGLVersion),
     LibraryProduct("libvtkCommonColor",:libvtkCommonColor),                                               
     LibraryProduct("libvtkCommonComputationalGeometry",:libvtkCommonComputationalGeometry),
     LibraryProduct("libvtkCommonCore",:libvtkCommonCore),
@@ -279,7 +281,7 @@ products = [
     LibraryProduct("libvtksys",:libvtksys),
     LibraryProduct("libvtktheora",:libvtktheora),
     LibraryProduct("libvtkViewsCore",:libvtkViewsCore)
-    #    LibraryProduct("libvtkloguru",:libvtkloguru): logging is off.
+    #    LibraryProduct("libvtkloguru",:libvtkloguru): logging is off due to missing support for musl
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -301,7 +303,7 @@ dependencies = [
 ]
 
 # Build the tarballs, and possibly a `build.jl` as well.
-# On older compiler versions there were errors when cross-compiling.
+# On compiler version 5 there were errors when cross-compiling.
 build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies,
-               preferred_gcc_version=v"9")
+               preferred_gcc_version=v"6")
  
