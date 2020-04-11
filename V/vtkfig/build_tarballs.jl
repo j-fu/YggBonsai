@@ -4,11 +4,11 @@ using BinaryBuilder
 using Pkg
 
 name = "vtkfig"
-version = v"0.24.3"
+version = v"0.24.4"
 
 # Collection of sources required to build vtkfig
 sources = [
-    GitSource("https://github.com/j-fu/vtkfig.git","b44c3f0879d4b660bb3b1de6db248def0fde7366")
+    GitSource("https://github.com/j-fu/vtkfig.git","2e6db0d75e3273933705e356cf1018c521885b6a")
 ]
 
 
@@ -60,7 +60,8 @@ products = [
 
 dependencies=[
 #    Dependency(PackageSpec(name="VTKMinimal_jll",rev="530a89e35ca3b95a770f37f7115da8aec6e441a0")) # 9.0.0+0
-    Dependency(PackageSpec(name="VTKMinimal_jll",rev="c139fdc88bb8c328304062940dd4c8fcc1fa5414")) # 9.0.0+1 
+#    Dependency(PackageSpec(name="VTKMinimal_jll",rev="c139fdc88bb8c328304062940dd4c8fcc1fa5414")) # 9.0.0+1 
+    Dependency(PackageSpec(name="VTKMinimal_jll",rev="4941d11da3e5101ef56b8f68df0392c76d29cb42")) # 9.0.0+2 vtk 9.0.0.rc2
 ]
 
 # Build the tarballs, and possibly a `build.jl` as well.
