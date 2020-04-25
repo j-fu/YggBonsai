@@ -4,11 +4,11 @@ using BinaryBuilder
 using Pkg
 
 name = "vtkfig"
-version = v"0.24.4"
+version = v"0.25.0"
 
 # Collection of sources required to build vtkfig
 sources = [
-    GitSource("https://github.com/j-fu/vtkfig.git","2e6db0d75e3273933705e356cf1018c521885b6a")
+    GitSource("https://github.com/j-fu/vtkfig.git","754cfacdbd42f5bb30efe183046f34a112e92151")
 ]
 
 
