@@ -28,7 +28,8 @@ sources = [
     # "https://www.vtk.org/files/release/9.0/VTK-9.0.0.rc1.tar.gz" => "7dbedd58a1ae144b98a4534b9badac683c88e5aa4a959a57856680f00258d268"
     # Version with possibility to switch off wrapping tools and patch to compile in freebsd. Will be in 9.0.0 final.
     # ArchiveSource("file:///home/fuhrmann/Downloads/vtk-b1a7344f2be08aaca723b0e6880c0ca514d27e9f.tar.gz","ef36a80741dbd76600a24cc006bb4c58f5de24955beacd4df774bf0ea651ebcd")
-    "https://www.vtk.org/files/release/9.0/VTK-9.0.0.rc2.tar.gz" => "fe78589c3b42945a87327d07ba26fb189dcefdee85cf54378f58bd1c094b9849"
+    #"https://www.vtk.org/files/release/9.0/VTK-9.0.0.rc2.tar.gz" => "fe78589c3b42945a87327d07ba26fb189dcefdee85cf54378f58bd1c094b9849"
+    "https://www.vtk.org/files/release/9.0/VTK-9.0.0.rc3.tar.gz" => "3a3fc0b15bd1e2416092293f1dd6b21161c0fd2b4af59a85fb5b5333b617e7a9"
 ]
 
 
@@ -43,7 +44,7 @@ if [[ "${target}" == *-linux-* ]] || [[ "${target}" == *-freebsd* ]]; then
 fi
 
 # Adapt tarname to the source
-tarname="VTK-9.0.0.rc2"
+tarname="VTK-9.0.0.rc3"
 
 mkdir build
 cd build
@@ -280,7 +281,6 @@ products = [
     LibraryProduct("libvtksys",:libvtksys),
     LibraryProduct("libvtktheora",:libvtktheora),
     LibraryProduct("libvtkViewsCore",:libvtkViewsCore)
-    #    LibraryProduct("libvtkloguru",:libvtkloguru): logging is off due to missing support for musl
 ]
 
 # Dependencies that must be installed before this package can be built
